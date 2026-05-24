@@ -14,6 +14,7 @@ using Phobos.Enums;
 using Phobos.Orchestration;
 using Phobos.Patches;
 using UnityEngine;
+using System.Linq;
 
 namespace Phobos;
 
@@ -32,6 +33,8 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<Vector2> ObjectiveGuardDurationCut;
 
     public static ConfigEntry<bool> ScavSquadsEnabled;
+
+    public static Dictionary<string, ConfigEntry<int>> BotTypePercentages = new();
     
     public static ConfigEntry<float> ConvergenceRadiusScale;
     public static ConfigEntry<float> ConvergenceForceScale;
@@ -104,7 +107,17 @@ public class Plugin : BaseUnityPlugin
             nameof(BsgBrain.BigPipe),
             nameof(BsgBrain.BirdEye),
             nameof(BsgBrain.SectantPriest),
-            nameof(BsgBrain.SectantWarrior)
+            nameof(BsgBrain.SectantWarrior),
+            nameof(BsgBrain.ExUsec),
+            nameof(BsgBrain.BossBully),
+            nameof(BsgBrain.BossGluhar),
+            nameof(BsgBrain.BossBoar),
+            nameof(BsgBrain.BossKojaniy),
+            nameof(BsgBrain.BossSanitar),
+            nameof(BsgBrain.BossKolontay),
+            nameof(BsgBrain.BossPartisan),
+            nameof(BsgBrain.Tagilla),
+            nameof(BsgBrain.Killa),
         };
 
         BrainManager.AddCustomLayer(typeof(PhobosLayer), brains, 19);
@@ -123,8 +136,41 @@ public class Plugin : BaseUnityPlugin
         ScavSquadsEnabled = Config.Bind(general, "Brown Tide (RESTART)", true, new ConfigDescription(
             "Allows scavs to form squads. Beware! They'll tend to congeal into massive tides that sweep over the map.",
             null,
-            new ConfigurationManagerAttributes { Order = 1 }
+            new ConfigurationManagerAttributes { Order = 20 }
         ));
+
+        // Bot type activation percentages
+        var botPercentages = new (string name, string display, int defaultPct)[] {
+            (nameof(BsgBrain.Assault), "Scav %", 100),
+            (nameof(BsgBrain.PMC), "PMC %", 100),
+            (nameof(BsgBrain.PmcUsec), "PMC USEC %", 100),
+            (nameof(BsgBrain.PmcBear), "PMC BEAR %", 100),
+            (nameof(BsgBrain.Knight), "Knight %", 100),
+            (nameof(BsgBrain.BigPipe), "BigPipe %", 100),
+            (nameof(BsgBrain.BirdEye), "BirdEye %", 100),
+            (nameof(BsgBrain.SectantPriest), "Cultist Priest %", 100),
+            (nameof(BsgBrain.SectantWarrior), "Cultist Warrior %", 100),
+            (nameof(BsgBrain.ExUsec), "Raider %", 100),
+            (nameof(BsgBrain.BossBully), "Rashala %", 0),
+            (nameof(BsgBrain.BossGluhar), "Glukhar %", 0),
+            (nameof(BsgBrain.BossBoar), "Kaban %", 0),
+            (nameof(BsgBrain.BossKojaniy), "Shturman %", 0),
+            (nameof(BsgBrain.BossSanitar), "Sanitar %", 0),
+            (nameof(BsgBrain.BossKolontay), "Kolontay %", 0),
+            (nameof(BsgBrain.BossPartisan), "Partisan %", 0),
+            (nameof(BsgBrain.Tagilla), "Tagilla %", 0),
+            (nameof(BsgBrain.Killa), "Killa %", 0),
+        };
+
+        var order = 19;
+        foreach (var (name, display, defaultPct) in botPercentages)
+        {
+            BotTypePercentages[name] = Config.Bind(general, $"{display} (RESTART)", defaultPct, new ConfigDescription(
+                $"Percentage of {display.Replace(" %", "")} bots that will use Phobos AI (0 = none, 100 = all).",
+                new AcceptableValueRange<int>(0, 100),
+                new ConfigurationManagerAttributes { Order = order-- }
+            ));
+        }
 
         /*
          * Objectives

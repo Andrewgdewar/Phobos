@@ -29,9 +29,22 @@ public class PhobosLayer : CustomLayer
     private const string LayerName = "PhobosLayer";
     private readonly PhobosManager _phobos;
     private readonly Agent _agent;
+    private readonly bool _disabled;
 
     public PhobosLayer(BotOwner botOwner, int priority) : base(botOwner, priority)
     {
+        // Check if this bot type should be managed by Phobos based on configured percentage
+        var brainName = botOwner.Brain.BaseBrain.ShortName();
+        if (Plugin.BotTypePercentages.TryGetValue(brainName, out var pctEntry))
+        {
+            var roll = UnityEngine.Random.Range(0, 100);
+            if (roll >= pctEntry.Value)
+            {
+                _disabled = true;
+                return;
+            }
+        }
+
         // Have to turn this off otherwise bots will be deactivated far away.
         botOwner.StandBy.CanDoStandBy = false;
         botOwner.StandBy.Activate();
@@ -104,6 +117,8 @@ public class PhobosLayer : CustomLayer
 
     public override bool IsActive()
     {
+        if (_disabled) return false;
+
         var lastEnemyTimeSeen = Time.time - BotOwner.Memory.LastEnemyTimeSeen;
         // If the last enemy seen was more than 60 seconds ago, force isHealing to false
         var isHealing = (BotOwner.Medecine.Using || BotOwner.Medecine.SurgicalKit.HaveWork || BotOwner.Medecine.FirstAid.Have2Do) && lastEnemyTimeSeen < 60f;
@@ -119,6 +134,8 @@ public class PhobosLayer : CustomLayer
 
     public override void BuildDebugText(StringBuilder sb)
     {
+        if (_disabled) return;
+
         var pose = BotOwner.GetPlayer.MovementContext.PoseLevel;
         var actualSpeed = _agent.Player.MovementContext.CharacterMovementSpeed;
 
